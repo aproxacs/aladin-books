@@ -62,7 +62,7 @@ module Aladin
     end
 
 
-    describe "#initialize", focus: true do
+    describe "#initialize" do
       let(:body) { File.read(File.join(File.dirname(__FILE__), "../data/ruby_result.txt")) }
       let(:hash) { JSON.parse(body.gsub(/;?/, "")) }
       let(:books) { Books.new(hash) }
