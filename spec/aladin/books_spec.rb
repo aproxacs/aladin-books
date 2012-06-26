@@ -24,9 +24,11 @@ module Aladin
 
     describe ".search" do
       let(:query) { "hello" }
+      let(:per_page) { 10 }
       let(:body) { File.read(File.join(File.dirname(__FILE__), "../data/hello_result.txt")) }
+
       before(:each) do
-        Books.configure {|c| c.ttb_key = ttb_key}
+        Books.configure {|c| c.ttb_key = ttb_key; c.per_page = per_page}
 
         stub_request(:get, "http://www.aladin.co.kr/ttb/api/ItemSearch.aspx")
             .with(:query => hash_including(:Query => query))
@@ -41,8 +43,17 @@ module Aladin
 
       it "sends request to aladin" do
         Books.search query
+
+        query_params = {
+          :ttbkey => ttb_key,
+          :Query => query,
+          :start => "1",
+          :MaxResults => per_page.to_s,
+          :SearchTarget => "Book",
+          :output => "js"
+        }
         a_request(:get, "http://www.aladin.co.kr/ttb/api/ItemSearch.aspx")
-            .with(:query => hash_including(:Query => query)).should have_been_made
+            .with(:query => hash_including(query_params)).should have_been_made
       end
 
       it "creates books object with respond body" do
@@ -62,11 +73,6 @@ module Aladin
 
       context "when error was responded" do
         let(:body) { File.read(File.join(File.dirname(__FILE__), "../data/error.txt")) }
-        before(:each) do
-          stub_request(:get, "http://www.aladin.co.kr/ttb/api/ItemSearch.aspx")
-              .with(:query => hash_including(:Query => query))
-              .to_return(:body => body)
-        end
 
         it "returned books has error_code and error_msg" do
           books = Books.search query
@@ -74,6 +80,36 @@ module Aladin
           books.should be_error
           books.error_code.should == 1
           books.error_msg.should be_present
+        end
+      end
+
+      context "when page option is specified" do
+        let(:page) { 2 }
+        let(:per_page) { 20 }
+        it "sends request including page info" do
+          books = Books.search query, page: page
+
+          query_params = {
+            :Query => query,
+            :start => "21",
+            :MaxResults => per_page.to_s
+          }
+          a_request(:get, "http://www.aladin.co.kr/ttb/api/ItemSearch.aspx")
+              .with(:query => hash_including(query_params)).should have_been_made
+        end
+      end
+
+      context "when per_page options is specified" do
+        it "sends request including page info" do
+          books = Books.search query, page: 2, per_page: 5
+
+          query_params = {
+            :Query => query,
+            :start => "6",
+            :MaxResults => "5"
+          }
+          a_request(:get, "http://www.aladin.co.kr/ttb/api/ItemSearch.aspx")
+              .with(:query => hash_including(query_params)).should have_been_made
         end
       end
     end

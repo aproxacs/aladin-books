@@ -7,8 +7,8 @@ module Aladin
         yield self
       end
 
-      def search(query)
-        uri.query = URI.encode_www_form(default_params.update(:Query => query))
+      def search(query, options={})
+        set_query(query, options)
         res = Net::HTTP.get_response(uri)
         if res.is_a?(Net::HTTPSuccess)
           body = res.body.gsub(/;?/, "")
@@ -24,14 +24,24 @@ module Aladin
         end
 
         def default_params
-          @default_params ||= {
+          {
             :ttbkey => ttb_key,
             :QueryType => "Title",
-            :MaxResults => per_page,
-            :start => 1,
             :SearchTarget => "Book",
             :output => "js"
           }
+        end
+
+        def set_query(query, options = {})
+          options[:page] ||= 1
+          options[:per_page] ||= per_page
+          params = default_params.update(
+            :Query => query,
+            :start => 1 + (options[:page]-1)*options[:per_page],
+            :MaxResults => options[:per_page]
+          )
+
+          uri.query = URI.encode_www_form(params)
         end
     end
 
