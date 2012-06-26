@@ -59,6 +59,23 @@ module Aladin
       #   Books.ttb_key = ""
       #   Books.search "ruby"
       # end
+
+      context "when error was responded" do
+        let(:body) { File.read(File.join(File.dirname(__FILE__), "../data/error.txt")) }
+        before(:each) do
+          stub_request(:get, "http://www.aladin.co.kr/ttb/api/ItemSearch.aspx")
+              .with(:query => hash_including(:Query => query))
+              .to_return(:body => body)
+        end
+
+        it "returned books has error_code and error_msg" do
+          books = Books.search query
+
+          books.should be_error
+          books.error_code.should == 1
+          books.error_msg.should be_present
+        end
+      end
     end
 
 
@@ -89,6 +106,7 @@ module Aladin
         books.should be_a(Array)
         books.first.should be_a(Book)
       end
+
     end
 
   end

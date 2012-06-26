@@ -21,19 +21,32 @@ module Aladin
         uri.query = URI.encode_www_form(params)
         res = Net::HTTP.get_response(uri)
         if res.is_a?(Net::HTTPSuccess)
-          Books.new(JSON.parse(res.body.gsub(/;?/, "")))
+
+          body = res.body.gsub(/;?/, "")
+          hash = JSON.parse(body) rescue JSON.parse(body.gsub("'", '"'))
+
+          Books.new(hash)
         end
       end
     end
 
-    attr_accessor :total, :page, :per_page
+    attr_accessor :total, :page, :per_page, :error_code, :error_msg
 
     def initialize(hash)
-      @total = hash["totalResults"]
-      @page = 1 + (hash["startIndex"]/hash["itemsPerPage"])
-      @per_page = hash["itemsPerPage"]
+      if hash["errorCode"]
+        @error_code = hash["errorCode"]
+        @error_msg = hash["errorMessage"]
+      else
+        @total = hash["totalResults"]
+        @page = 1 + (hash["startIndex"]/hash["itemsPerPage"])
+        @per_page = hash["itemsPerPage"]
 
-      super hash["item"].map {|i| Book.new(i)}
+        super hash["item"].map {|i| Book.new(i)}
+      end
+    end
+
+    def error?
+      @error_code.present?
     end
 
   end
